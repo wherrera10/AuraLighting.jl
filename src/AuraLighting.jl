@@ -93,4 +93,10 @@ function setcolor(auramb::AuraMb, rgb, controller=0)
     setcolor(auramb, r, g, b, controller)
 end
 
+"""
+Set color of the LED light as an LEDColor struct
+"""
+setcolor(amb, led::LEDColor, cont=0) = setcolor(amb, led.r, led.g, led.b, cont)
+
+
 end # of module
