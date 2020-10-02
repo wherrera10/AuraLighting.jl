@@ -11,76 +11,54 @@ module AuraLighting
 
 using ZMQ
 
-export AuraMb, LEDColors, getcolor, setcolor
+export AuraMbControl, getcolor, setcolor
 
-struct LEDColor
-    r::UInt8   # red
-    g::UInt8   # green
-    b::UInt8   # blue
-end
-
-const black = LEDColor(0, 0, 0)
-const red = LEDColor(255, 0, 0)
-const green = LEDColor(0, 255, 0)
-const blue = LEDColor(0, 0, 255)
-const white = LEDColor(255, 255, 255)
-
-function LEDColors(buf::Vector{UInt8})
-    len = length(buf)
-    @assert(len % 3 == 0)
-    return [LEDColor(buf[i], buf[i+1], buf[i+2]) for i in 1:3:len-1]
-end
-
-asbuf(colors::Vector{LEDColor}) = mapreduce(c -> [c.r, c.g, c.b], vcat, colors)
-
-const bufchar = UInt8
-const AStr = Ptr{bufchar}
-struct AuraHandle end
-const APtr = Ptr{AuraHandle}
+const Handle = Ptr{Nothing}
+const Hptr = Ptr{Handle}
+const Bptr = Ptr{UInt8}
 
 const DLLNAME = "AURA_SDK.dll"
 
-struct AuraMb   # Aura compatible motherboard
-    controllernumber::Int32  # 0 for first or default controller
-    LEDcount::Int32  # note that length of colors should == 3 * LEDcount
-    handles::Vector{APtr}
-    colors::Vector{LEDColor}
+struct AuraMbControl   # Aura compatible motherboard
+    controllernumber::Int  # 0 for first or default controller
+    LEDcount::Int
+    handle::Handle
     colorbuf::Vector{UInt8}
+    buflen::Int
 end
 
-function AuraMb(controller=0)
-    handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (APtr,), Ptr{Cvoid}(0))
-    handlecount == 0 && error("No motherboard Aura controllers available.")
-    handles = fill(Ptr(AuraHandle()), handlecount)
-    ccall((:EnumerateMbController, DLLNAME), Cint, (APtr,), handles)
-    success = ccall((:SetMbMode, DLLNAME), Cint, (APtr, Cint), handles[controller], 1)
-    success == 1 || error("Cannot set Aura mode on motherboard")
-    bufsize =  ccall((:GetMbColor, DLLNAME), Cint, (APtr, Ptr{Cvoid}), handles[controller], Ptr{Cvoid}(0))
-    buf = fill(0x0, bufsize)
-    ccall((:GetMbColor, DLLNAME), Cint, (APtr, AStr), handles[controller], buf)
-    return AuraMb(controller, bufsize ÷ 3, handles, LEDColors(buf), buf)
+function AuraMbControl(cont=1)
+    handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), C_NULL)
+    handlecount < 1 && error("No motherboard Aura controllers available.")
+    handles = fill(C_NULL, handlecount)
+    ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), pointer(handles))
+    handle = handles[cont]
+    LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
+    buflen = ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, C_NULL, 3)
+    colorbuf = fill(0x0, buflen)
+    ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, colorbuf, 3)  # buflen
+ #   ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), handle, 1)
+    return AuraMbControl(cont, LEDcount, handle, colorbuf, buflen)
 end
 
 """
-Get RGB color as an LEDColor struct containing red, green, and blue values
+Get RGB color as red, green, and blue values
 """
-function getcolor(auramb::AuraMb)
-    ccall((:GetMbColor, DLLNAME), Cint, (APtr, AStr),
-        auramb.handles[auramb.controllernumber], auramb.colorbuf)
-    length(buf) >= 3 || error("Color buffer reading error")
-    return LEDColor(buf[1], buf[2], buf[3])
+function getcolor(auramb::AuraMbControl)
+    ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+        auramb.handle, pointer(auramb.colorbuf), 3)
+    return auramb.colorbuf[1], auramb.colorbuf[2], auramb.colorbuf[3]
 end
 
 """
 Set RGB color as separate red, green, and blue values
 """
-function setcolor(auramb::AuraMb, red, green, blue)
-    for (i, c) in enumerate(colors)
-        colors.r, colors.g, colors.b = red, green, blue
-        colorbuf[3i-2], colorbuf[3i-1], colorbuf[3i] = red, green, blue
+function setcolor(au::AuraMbControl, red, green, blue)
+    for i in 1:3:au.buflen
+        au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
     end
-    success = ccall((:SetMbColor, DLLNAME), Cint, (APtr, AStr, Cint),
-        auramb.handles[auramb.controllernumber], auramb.colorbuf, length(auramb.colorbuf))
+    success = ccall((:SetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+        au.handle, pointer(au.colorbuf), au.buflen)
     success == 1 || error("Failed to set Aura motherboard color")
 end
 
@@ -90,9 +68,9 @@ The color is of form hex 0x00rrggbb, where rr id red, gg green,
     and bb the blue values of an RGB coded color
 Black is 0, white is 0x00ffffff
 """
-function setcolor(auramb::AuraMb, rgb::Integer)
-    r, g, b = UInt8(rbg >> 16), UInt8((rgb >> 8) && 0xff), UInt8(rgb & 0xff)
-    setcolor(auramb, r, g, b, controller)
+function setcolor(au::AuraMbControl, rgb::Integer)
+    r, g, b = UInt8((rgb >> 16) & 0xff), UInt8((rgb >> 8) & 0xff), UInt8(rgb & 0xff)
+    setcolor(au, r, g, b)
 end
 
 mutable struct ZMQservice
@@ -100,7 +78,7 @@ mutable struct ZMQservice
     rep::Socket
     req::Socket
     controller::Int
-    aura::Union{AuraMb, Nothing}
+    aura::Union{AuraMbControl, Nothing}
 end
 
 function ZMQserver(serv::ZMQservice)
@@ -115,7 +93,7 @@ function ZMQserver(serv::ZMQservice)
     end
 end
 
-function ZMQservice(controller=0, port=5555)
+function ZMQservice(controller=1, port=5555)
     rep = Socket(REP)
     req = Socket(REQ)
     bind(rep, "tcp://*:$port")
@@ -127,7 +105,7 @@ end
 
 function ZMQinit(z::ZMQservice, message::String)
     z.controller = something(tryparse(Int, message), 0)
-    z.aura = AuraMb(controller)
+    z.aura = AuraMbControl(controller)
     send(z.socket, "OK")
 end
 
@@ -135,8 +113,8 @@ function ZMQgetcolor(z::ZMQservice, message::String)
     if z.aura == nothing
         send(rep, "Error Aura not initialized.")
     else
-        c = getcolor(z.aura)
-        send(rep, "OK $(c.r << 16) | (c.g << 8) | c.b)")
+        r, g, b = getcolor(z.aura)
+        send(rep, "OK $(r << 16) | (g << 8) | b)")
     end
 end
 
