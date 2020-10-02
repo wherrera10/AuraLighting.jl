@@ -16,3 +16,5 @@ while true
     mod(n[2], 40) == 0 && (n[1] = 0xe00ee)
     mod(n[2], 60) == 0 && (n[1] = 0x00eeee)
 end
+
+AuraLighting.setautomode(aur, to_automatic=true)
