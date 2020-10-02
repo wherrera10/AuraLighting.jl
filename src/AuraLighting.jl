@@ -11,7 +11,7 @@ module AuraLighting
 
 using ZMQ
 
-export AuraMbControl, getcolor, setcolor
+export AuraMbControl, getcolor, setcolor, setautomode
 
 const Handle = Ptr{Nothing}
 const Hptr = Ptr{Handle}
@@ -39,6 +39,11 @@ function AuraMbControl(cont=1)
     ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, colorbuf, 3)  # buflen
  #   ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), handle, 1)
     return AuraMbControl(cont, LEDcount, handle, colorbuf, buflen)
+end
+
+
+function setautomode(au::AuraMbControl; to_automatic=true)
+    ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, to_automatic != false)
 end
 
 """
