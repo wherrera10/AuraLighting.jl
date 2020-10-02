@@ -1,17 +1,8 @@
-#=
-Aura lighting (ASUS SDK) interface
-Julia module to interface with the AURA lighting controller on certain PC motherboards
-Created on Monday, 28 September 2020 at 2:35:34
-author: William Herrera
-
-IMPORTANT: run as administrator
-=#
-
 module AuraLighting
 
 using ZMQ
 
-export AuraMbControl, getcolor, setcolor, setautomode
+export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setautomode
 
 const Handle = Ptr{Nothing}
 const Hptr = Ptr{Handle}
@@ -25,25 +16,33 @@ struct AuraMbControl   # Aura compatible motherboard
     handle::Handle
     colorbuf::Vector{UInt8}
     buflen::Int
+    rep::Socket
+    req::Socket
+    port::Int
+    client::String
+    function AuraMbControl(cont=1; asservice=false, port=5555, client="localhost")
+        handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), C_NULL)
+        handlecount < cont && error("Motherboard Aura controller number $cont is not available.")
+        handles = fill(C_NULL, handlecount)
+        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), pointer(handles))
+        handle = handles[cont]
+        LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
+        buflen = ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, C_NULL, 3)
+        colorbuf = fill(0x0, buflen)
+        ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, colorbuf, 3)  # buflen
+        rep = Socket(REP)
+        req = Socket(REQ)
+        obj = new(cont, LEDcount, handle, colorbuf, buflen, rep, req, port, client)
+        if asservice
+           @async ZMQservice(obj)
+        end
+       return finalizer(obj -> (close(obj.rep); close(obj.req)), obj)
+    end
 end
 
-function AuraMbControl(cont=1)
-    handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), C_NULL)
-    handlecount < 1 && error("No motherboard Aura controllers available.")
-    handles = fill(C_NULL, handlecount)
-    ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), pointer(handles))
-    handle = handles[cont]
-    LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
-    buflen = ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, C_NULL, 3)
-    colorbuf = fill(0x0, buflen)
-    ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, colorbuf, 3)  # buflen
- #   ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), handle, 1)
-    return AuraMbControl(cont, LEDcount, handle, colorbuf, buflen)
-end
-
-
-function setautomode(au::AuraMbControl; to_automatic=true)
-    ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, to_automatic == 0)
+function setmode(au::AuraMbControl, setting::Integer=0)
+    0 <= setting <= 1 || return
+    ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, setting)
 end
 
 """
@@ -78,65 +77,76 @@ function setcolor(au::AuraMbControl, rgb::Integer)
     setcolor(au, r, g, b)
 end
 
-mutable struct ZMQservice
-    port::Int
-    rep::Socket
-    req::Socket
-    controller::Int
-    aura::Union{AuraMbControl, Nothing}
-end
-
-function ZMQserver(serv::ZMQservice)
-    while true
-        message = recv(serv.socket, String)
-        isempty(message) && continue
-        words = split(message, r"\s+", limit=2)
-        words[1] = "quit" && break
-        length(words) < 2 && push!(words, "")
-        # call the function indexed in api Dict
-        result = get(api, words[1], x -> send(rep, "Error $message"))(words[2])
-    end
-end
-
-function ZMQservice(controller=1, port=5555)
-    rep = Socket(REP)
-    req = Socket(REQ)
-    bind(rep, "tcp://*:$port")
-    connect(req, "tcp://localhost:$port")
-    serv = new(port, rep, req, controller, nothing)
-    @async ZMQserver(serv)
-    return finalizer(obj -> (close(obj.rep); close(obj.req)), serv)
-end
-
-function ZMQinit(z::ZMQservice, message::String)
-    z.controller = something(tryparse(Int, message), 0)
-    z.aura = AuraMbControl(controller)
-    send(z.socket, "OK")
-end
-
-function ZMQgetcolor(z::ZMQservice, message::String)
-    if z.aura == nothing
-        send(rep, "Error Aura not initialized.")
-    else
-        r, g, b = getcolor(z.aura)
-        send(rep, "OK $(r << 16) | (g << 8) | b)")
-    end
-end
-
-function ZMQsetcolor(z::ZMQservice, message::String)
-    if z.aura == nothing
-        send("Error Aura not initialized.")
-    else
-        try
-            c = parse(Int, message)
-            setcolor(z.aura, c)
-            send("OK")
-        catch
-            send(rep, "Error Cannot set color to $message")
+function ZMQservice(au::AuraMbLighting)
+    try
+        bind(rep, "tcp://*:$(au.port)")
+        connect(req, "tcp://$(au.client):$(au.port)")
+        while true
+            message = recv(au.req, String)
+            cmd = message * " 0 0 "
+            words = split(cmd, r"\s+")
+            if words[1] = "getcolor"
+                r, g, b = getcolor(au)
+                send(au.rep, "OK $(r << 16) | (g << 8) | b)")
+            elseif words[1] = "setcolor" && (c = tryparse(Int, words[2]) != nothing
+                setcolor(au, c)
+                send(au.rep, "OK")
+            elseif words[1] = "setmode"
+                if (n = tryparse(Int, words[2]) != nothing
+                setmode(au, n)
+                send(au.rep, "OK")
+            elseif words[1] = "getcontroller"
+                send(au.rep, "OK $(au.controllernumber)")
+            else
+                warn("Unknown command received: $message")
+                send(au.rep, "ERROR in message received: $message")
+            end
+        end
+        catch y
+            warn("ZMQ server fatal error: $y with message $message")
+            send(au.rep, "ERROR service ending exception $y")
         end
     end
 end
 
-const api = Dict("init" => ZMQinit, "getcolor" => ZMQgetcolor, "setcolor" => ZMQsetcolor)
+struct AuraMBControlClient
+    controllernumber::Int
+    rep::Socket
+    req::Socket
+    port::Int
+    client::String
+    function AuraMBControlClient(controller=1; port=5555, server="localhost)
+        rep = Socket(REP)
+        req = Socket(REQ)
+        bind(rep, "tcp://*:$(port)")
+        connect(req, "tcp://$(client):$(port)")
+        obj = new(controller, rep, req, port, client)       
+        return finalizer(obj -> (close(obj.rep); close(obj.req)), obj)
+    end
+end
+
+function iscorrectcontroller(client::AuraMBControlClient)
+    send(client.req, "getcontroller")
+    try
+        message = recv(client.req, String)
+        s = split(message, r"\s+")
+        n = parse(Int, s[2])
+        return n == client.controllernumber
+    catch y
+        warn("Controller check error $y")
+        return false
+    end
+end
+function setcolor(client::AuraMBControlClient, color::Int)
+
+end
+
+function getcolor(client::AuraMBControlClient)
+
+end
+
+function setmode(client::AuraMBControlClient, mode::Integer)
+
+end
 
 end # of module
