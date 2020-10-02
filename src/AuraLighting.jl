@@ -43,7 +43,7 @@ end
 
 
 function setautomode(au::AuraMbControl; to_automatic=true)
-    ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, to_automatic != false)
+    ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, to_automatic == 0)
 end
 
 """
