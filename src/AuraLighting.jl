@@ -38,11 +38,11 @@ struct AuraMbControl
     Constructor for an AuraMBControl.
 
     cont: controller number, defaults to 1 (first or only controller found)
-    asservice: true if the ZMQ service is to be started
+    isservice: true if the ZMQ service is to be started
     port: port number of ZMQ service, defaults to 5555
     client: address of ZMQ client, defaults to "localhost"
     """
-    function AuraMbControl(cont=1; asservice=false, port=5555, client="localhost")
+    function AuraMbControl(cont=1; isservice=false, port=5555, client="localhost")
         handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), C_NULL)
         handlecount < cont && error("Motherboard Aura controller number $cont is not available.")
         handles = fill(C_NULL, handlecount)
@@ -55,7 +55,7 @@ struct AuraMbControl
         rep = ZMQ.Socket(REP)
         req = ZMQ.Socket(REQ)
         obj = new(cont, LEDcount, handle, colorbuf, buflen, rep, req, port, client)
-        if asservice
+        if isservice
            @async ZMQservice(obj)
         end
        return finalizer(obj -> (close(obj.rep); close(obj.req)), obj)
