@@ -2,10 +2,10 @@ module AuraLighting
 
 using ZMQ
 
-export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setautomode
+export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setmode
 
 const Handle = Ptr{Nothing}
-const Hptr = Ptr{Handle}
+const Hptr = Ptr{Ptr{Nothing}}
 const Bptr = Ptr{UInt8}
 
 """
@@ -14,56 +14,36 @@ OR ELSE YOU SHOULD PLACE A COPY IN A DIRECTORY IN YOUR PATH.
 """
 const DLLNAME = "AURA_SDK.dll"
 
-"""
-    struct AuraMbControl
-
-Aura SDK compatible motherboard
-
-controllernumber: light controller(s) on board, between 1 and number of controllers.
-LEDcount: generally, number of LED's controlled, but may be 1 in some cases
-
-NOTE: THIS IS LINKED TO A WIN32 DLL, SO IT CANNOT BE RUN IN 64-BIT MODE.
-MUST BE INSTANTIATED UNDER 32-BIT WINDOWS JULIA AND RUN AS AN ADMINISTRATOR.
-MAKE SURE OTHER AURA LIGHTING APPLICATIONS ARE NOT RUNNING BEFORE RUNNING THIS.
-"""
-struct AuraMbControl
+mutable struct AuraMbControl
     controllernumber::Int
     LEDcount::Int
     handle::Handle
     colorbuf::Vector{UInt8}
     buflen::Int
-    rep::ZMQ.Socket
-    req::ZMQ.Socket
     port::Int
     client::String
     """
         function AuraMbControl(cont=1; asservice=false, port=5555, client="localhost")
-
     Constructor for an AuraMBControl.
-
     cont: controller number, defaults to 1 (first or only controller found)
-    isservice: true if the ZMQ service is to be started
     port: port number of ZMQ service, defaults to 5555
     client: address of ZMQ client, defaults to "localhost"
     """
-    function AuraMbControl(cont=1; isservice=false, port=5555, client="localhost")
-        handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), C_NULL)
-        handlecount < cont && error("Motherboard Aura controller number $cont is not available.")
-        handles = fill(C_NULL, handlecount)
-        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr,), pointer(handles))
+    function AuraMbControl(cont=1, port=5555, client="localhost")
+        Base.GC.enable(false)
+        handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
+        handles = [C_NULL for _ in 1:handlecount]
+        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, handlecount)
         handle = handles[cont]
         LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
-        buflen = ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, C_NULL, 3)
-        colorbuf = fill(0x0, buflen)
-        ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint), handle, colorbuf, 3)  # buflen
-        rep = ZMQ.Socket(REP)
-        req = ZMQ.Socket(REQ)
-        obj = new(cont, LEDcount, handle, colorbuf, buflen, rep, req, port, client)
-        if isservice
-           @async ZMQservice(obj)
-        end
-       return finalizer(obj -> (close(obj.rep); close(obj.req)), obj)
+        buflen = LEDcount * 3
+        colorbuf = zeros(UInt8, buflen)
+        return new(cont, LEDcount, handle, colorbuf, buflen, port, client)
     end
+end
+
+function startserver(au)
+    @async begin ZMQservice(au) end
 end
 
 """
@@ -73,7 +53,8 @@ Set mode of motherboard Aura controller from software control to an auto mode
 
 A setting of 0 will change to the auto mode. A setting of 1 is software control.
 """
-function setmode(au::AuraMbControl, setting::Integer)
+function setmode(au, setting::Integer)
+    GC.enable(false)
     0 <= setting <= 1 || return
     ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, setting)
 end
@@ -83,10 +64,14 @@ end
 
 Get RGB color as a tuple of red, green, and blue values (0 to 255 each).
 """
-function getcolor(auramb::AuraMbControl)
+function getcolor(au)
+    Base.GC.@preserve au.colorbuf
+    for i in 1:au.buflen
+        au.colorbuf[i] = 0x0
+    end
     ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
-        auramb.handle, pointer(auramb.colorbuf), 3)
-    return auramb.colorbuf[1], auramb.colorbuf[2], auramb.colorbuf[3]
+        au.handle, au.colorbuf, au.buflen)
+    return Int(au.colorbuf[1]), Int(au.colorbuf[2]), Int(au.colorbuf[3])
 end
 
 """
@@ -94,13 +79,14 @@ end
 
 Set RGB color via setting color with separate red, green, and blue values
 """
-function setcolor(au::AuraMbControl, red, green, blue)
-    for i in 1:3:au.buflen
+function setcolor(au, red, green, blue)
+    Base.GC.@preserve au.colorbuf
+    for i in 1:3:au.buflen-1
         au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
     end
     success = ccall((:SetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
-        au.handle, pointer(au.colorbuf), au.buflen)
-    success == 1 || error("Failed to set Aura motherboard color")
+        au.handle, au.colorbuf, au.buflen)
+    return success == 1
 end
 
 """
@@ -111,7 +97,7 @@ The color is of form hex 0xRRGGBB, where RR is the red component, GG green,
     and BB the blue values of an 24-bit RGB coded color.
 Black is 0, white is 0x00ffffff, red 0xff0000, green 0x00ff00, blue 0x0000ff
 """
-function setcolor(au::AuraMbControl, rgb::Integer)
+function setcolor(au, rgb::Integer)
     r, g, b = UInt8((rgb >> 16) & 0xff), UInt8((rgb >> 8) & 0xff), UInt8(rgb & 0xff)
     setcolor(au, r, g, b)
 end
@@ -122,8 +108,10 @@ end
 Serve requests via ZMQ to control the Aura lighting controller on the motherboard.
 This must be run in 32-bit Windows mode with admin privileges.
 """
-function ZMQservice(au:: AuraMbControl)
+function ZMQservice(au::AuraMbControl)
     try
+        rep = ZMQ.Socket(REP)
+        req = ZMQ.Socket(REQ)
         bind(au.rep, "tcp://*:$(au.port)")
         connect(au.req, "tcp://$(au.client):$(au.port)")
         while true
@@ -146,6 +134,8 @@ function ZMQservice(au:: AuraMbControl)
                 send(au.req, "ERROR in message received: $message")
             end
         end
+        close(rep)
+        close(req)
     catch y
         warn("ZMQ server fatal error: $y with message $message")
         send(au.req, "ERROR service ending exception $y")
@@ -160,7 +150,7 @@ Client for a service to change Aura lighting via the 32-bit Win32 Aura lighting 
 This client can be any application and can be 64-bit even though the server must be
 32-bit because ASUStek only provided a 32-bit DLL for Windows in its AuraSDK library.
 """
-struct AuraMBControlClient
+mutable struct AuraMBControlClient
     controllernumber::Int
     rep::ZMQ.Socket
     req::ZMQ.Socket
