@@ -1,7 +1,7 @@
 using AuraLighting
 using Test
 
-lighting = AuraMb(1, isservice=true)
+lighting = AuraMbControl(1, isservice=true)
 
 @testset "Direct control" begin
 
