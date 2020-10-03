@@ -1,11 +1,11 @@
 using AuraLighting
 using Test
 
-lighting = AuraMbControl(1, isservice=true)
+aur = AuraMbControl(1, isservice=true)
 
 @testset "Direct control" begin
 
-    @test lighting isa AuraMbControl
+    @test aur isa AuraMbControl
     
     const n = [0x707070, 0x3]
     while n[2] < 100
