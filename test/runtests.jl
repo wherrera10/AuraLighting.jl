@@ -8,7 +8,7 @@ lighting = AuraMb(1, isservice=true)
     @test lighting isa AuraMbControl
     
     const n = [0x707070, 0x3]
-    while true
+    while n[2] < 100
         println("set to $(n[1])")
         setcolor(aur, n[1] & 0xffffff)
         sleep(0.2)
