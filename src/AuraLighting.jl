@@ -8,6 +8,10 @@ const Handle = Ptr{Nothing}
 const Hptr = Ptr{Handle}
 const Bptr = Ptr{UInt8}
 
+"""
+NOTE: THIS DLL FILE MUST BE LOCATED EITHER IN THE DIRECTORY WHERE PROGRAM IS RUN,
+OR PLACE A COPY IN DIRECTORY IN YOUR PATH.
+"""
 const DLLNAME = "AURA_SDK.dll"
 
 """
