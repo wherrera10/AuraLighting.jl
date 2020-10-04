@@ -4,6 +4,7 @@ uuid = "158d7793-e11f-4c20-a9b1-63b9418f6648"
 version = "0.0.1"
 
 [deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 ZMQ = "c2297ded-f4af-51ae-bb23-16f91089e4e1"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
