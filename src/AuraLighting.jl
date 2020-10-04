@@ -3,7 +3,7 @@ module AuraLighting
 using ZMQ
 
 export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setmode
-export rgbtoi, itorgb, startserver, iscorrectcontroller
+export rbgtoi, itorbg, startserver, iscorrectcontroller
 
 const Handle = Ptr{Nothing}
 const Hptr = Ptr{Ptr{Nothing}}
@@ -16,10 +16,10 @@ OR ELSE YOU SHOULD PLACE A COPY IN A DIRECTORY IN YOUR PATH.
 const DLLNAME = "AURA_SDK.dll"
 
 """ rgb integer to UInt8 (r, g, b) """
-itorgb(i) = [UInt8((i >> 16) & 0xff), UInt8((i >> 8) & 0xff), UInt8(i & 0xff)]
+itorbg(i) = [UInt8((i >> 16) & 0xff), UInt8((i >> 8) & 0xff), UInt8(i & 0xff)]
 
 """ UInt8 (r, g, b) to rgb integer """
-rgbtoi(r, g, b) = ((UInt32(r) << 16) | (UInt32(g) << 8) | UInt32(b)) & 0xffffff
+rbgtoi(r, g, b) = ((UInt32(r) << 16) | (UInt32(g) << 8) | UInt32(b)) & 0xffffff
 
 mutable struct AuraMbControl
     controllernumber::Int
@@ -104,7 +104,7 @@ The color is of form hex 0xRRGGBB, where RR is the red component, GG green,
 Black is 0, white is 0x00ffffff, red 0xff0000, green 0x00ff00, blue 0x0000ff
 """
 function setcolor(au::AuraMbControl, rgb)
-    r, g, b = itorgb(rgb)
+    r, g, b = itorbg(rgb)
     setcolor(au, r, g, b)
 end
 
@@ -124,7 +124,7 @@ function ZMQservice(au::AuraMbControl)
             words = split(cmd, r"\s+")
             if words[1] == "getcolor"
                 r, g, b = getcolor(au)
-                send(sock, "OK $(rgbtoi(r, g, b))")
+                send(sock, "OK $(rbgtoi(r, g, b))")
             elseif words[1] == "setcolor" && (c = tryparse(Int, words[2])) != nothing
                 setcolor(au, c)
                 send(sock, "OK")
@@ -193,7 +193,7 @@ function getcolor(client::AuraMBControlClient)
         message = ZMQ.recv(client.sock, String)
         s = split(message, r"\s+")
         c = parse(Int, s[2])
-        return Tuple(itorgb(c))
+        return Tuple(itorbg(c))
     catch y
         warn("Error getting color: $y")
         return (0, 0, 0)
@@ -223,7 +223,7 @@ end
 Set Aura lighting color to RGB color with components r red, g green, b blue.
 Return: true on success, false on failure
 """
-setcolor(client::AuraMBControlClient, r, g, b) = setcolor(client, rgbtoi(r, g, b))
+setcolor(client::AuraMBControlClient, r, g, b) = setcolor(client, rbgtoi(r, g, b))
 
 """
    function setmode(client::AuraMBControlClient, mode::Integer)
