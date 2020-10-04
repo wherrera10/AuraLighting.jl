@@ -11,53 +11,53 @@ using Test, Random
     println("white")
     setcolor(aur, 0xff, 0xff, 0xff)
     sleep(0.8)
-    r, g, b = AuraLighting.getcolor(aur)
+    r, b, g = AuraLighting.getcolor(aur)
     @test r == 0xff
-    @test g == 0xff
     @test b == 0xff
+    @test g == 0xff
 
     println("black")
     setcolor(aur, 0x0, 0x0, 0x0)
     sleep(0.8)
-    r, g, b = AuraLighting.getcolor(aur)
+    r, b, g = AuraLighting.getcolor(aur)
     @test r == 0
-    @test g == 0
     @test b == 0
+    @test g == 0
 
     println("red")
     setcolor(aur, 0xff, 0x0, 0x0)
     sleep(0.8)
-    r, g, b = AuraLighting.getcolor(aur)
+    r, b, g = AuraLighting.getcolor(aur)
     @test r == 0xff
-    @test g == 0
     @test b == 0
+    @test g == 0
 
     println("green")
     setcolor(aur, 0x0, 0xff, 0x0)
     sleep(0.8)
-    r, g, b = getcolor(aur)
+    r, b, g = getcolor(aur)
     @test r == 0
-    @test g == 0xff
-    @test b == 0
+    @test b == 0xff
+    @test g == 0
 
     println("blue")
     setcolor(aur, 0x0, 0x0, 0xff)
     sleep(0.8)
-    r, g, b = getcolor(aur)
+    r, b, g = getcolor(aur)
     @test r == 0
-    @test g == 0
-    @test b == 0xff
+    @test b == 0
+    @test g == 0xff
 
     picks = collect(0x0:0xff)
     for i in 1:5
         sleep(0.8)
         c = view(shuffle!(picks),1:3)
-        n = rgbtoi(c[1], c[2], c[3])
+        n = UInt(rbgtoi(c[1], c[2], c[3]))
         println("Set color to $n")
         setcolor(aur, n)
         sleep(0.8)
         r2, g2, b2 = getcolor(aur)
-        @test rgbtoi(c[1], c[2], c[3]) == n
+        @test rbgtoi(c[1], c[2], c[3]) == n
     end
 
 end #testset
