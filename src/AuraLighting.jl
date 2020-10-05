@@ -5,8 +5,8 @@ using ZMQ
 export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setmode
 export rbgtoi, itorbg, startserver, iscorrectcontroller
 
-const Handle = Ptr{Nothing}
-const Hptr = Ptr{Ptr{Nothing}}
+const Handle = Ptr{Cvoid}
+const Hptr = Ptr{Ptr{Cvoid}}
 const Bptr = Ptr{UInt8}
 
 """
@@ -29,24 +29,27 @@ mutable struct AuraMbControl
     buflen::Int
     port::Int
     client::String
-    """
-        function AuraMbControl(cont=1; asservice=false, port=5555, client="localhost")
-    Constructor for an AuraMBControl.
-    cont: controller number, defaults to 1 (first or only controller found)
-    port: port number of ZMQ service, defaults to 5555
-    client: address of ZMQ client, defaults to "localhost"
-    """
-    function AuraMbControl(cont=1, port=5555, client="localhost")
-        GC.enable(false)
-        handlecount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
-        handles = [C_NULL for _ in 1:handlecount]
-        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, handlecount)
-        handle = handles[cont]
-        LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
-        buflen = LEDcount * 3
-        colorbuf = zeros(UInt8, buflen)
-        new(cont, LEDcount, handle, colorbuf, buflen, port, client)
-   end
+    AuraMbControl(c, n, h, p, a) = new(c, n, h, zeros(UInt, n * 3), n * 3, p, a)
+end
+
+"""
+    function AuraMbControl(cont=1; asservice=false, port=5555, client="localhost")
+Constructor for an AuraMBControl.
+cont: controller number, defaults to 1 (first or only controller found)
+port: port number of ZMQ service, defaults to 5555
+client: address of ZMQ client, defaults to "localhost"
+"""
+function AuraMbControl(cont=1, port=5555, client="localhost")
+    GC.enable(false)
+    hcount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
+    handles = [C_NULL for _ in 1:hcount]
+    LEDcount = 1
+    GC.@preserve handles begin
+        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount)
+    end
+    handle = handles[min(cont, hcount)]
+    LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
+    return AuraMbControl(cont, LEDcount, handle, port, client)
 end
 
 function startserver(au)
@@ -61,8 +64,8 @@ Set mode of motherboard Aura controller from software control to an auto mode
 A setting of 0 will change to the auto mode. A setting of 1 is software control.
 """
 function setmode(au::AuraMbControl, setting::Integer)
-    0 <= setting <= 1 || return
-    ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, setting)
+    0 <= setting <= 1 || return false
+    return ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, setting)
 end
 
 """
@@ -71,12 +74,14 @@ end
 Get RGB color as a tuple of red, green, and blue values (0 to 255 each).
 """
 function getcolor(au::AuraMbControl)
-    GC.@preserve au.colorbuf
     for i in 1:au.buflen
         au.colorbuf[i] = 0x0
     end
-    ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
-        au.handle, au.colorbuf, au.buflen)
+    buf = au.colorbuf
+    GC.@preserve buf begin
+        ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+            au.handle, buf, au.buflen)
+    end
     return Int(au.colorbuf[1]), Int(au.colorbuf[2]), Int(au.colorbuf[3])
 end
 
@@ -86,12 +91,14 @@ end
 Set RGB color via setting color with separate red, green, and blue values
 """
 function setcolor(au::AuraMbControl, red, green, blue)
-    GC.@preserve au.colorbuf
     for i in 1:3:au.buflen-1
         au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
     end
-    success = ccall((:SetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
-        au.handle, au.colorbuf, au.buflen)
+    buf = au.colorbuf
+    GC.@preserve buf begin
+        success = ccall((:SetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+            au.handle, buf, au.buflen)
+    end
     return success == 1
 end
 
