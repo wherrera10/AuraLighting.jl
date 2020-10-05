@@ -144,7 +144,7 @@ function ZMQservice(au::AuraMbControl)
                 send(sock, "OK")
                 break
             else
-                warn("Unknown command received: $message")
+                @warn("Unknown command received: $message")
                 send(sock, "ERROR in message received: $message")
             end
         end
@@ -205,7 +205,7 @@ function getcolor(client::AuraMBControlClient)
         c = parse(Int, s[2])
         return Tuple(itorbg(c))
     catch y
-        warn("Error getting color: $y")
+        @warn("Error getting color: $y")
         return (0, 0, 0)
     end
 end
@@ -222,7 +222,7 @@ function setcolor(client::AuraMBControlClient, color)
         message = ZMQ.recv(client.sock, String)
         return message[1:2] == "OK"
     catch y
-        warn("Error setting color to $color: $y")
+        @warn("Error setting color to $color: $y")
         return false
     end
 end
@@ -248,23 +248,22 @@ function setmode(client::AuraMBControlClient, mode)
         message = recv(client.sock, String)
         return message[1:2] == "OK"
     catch y
-        warn("Error setting mode")
+        @warn("Error setting mode")
         return false
     end
 end
 
 function sendexit(client::AuraMBControlClient)
-    0 <= mode <= 1 || return false
     try
         send(client.sock, "exit")
         message = recv(client.sock, String)
         if message[1:2] == "OK"
-            info("Sent exit command to server, terminating socket")
+            @info("Sent exit command to server, terminating socket")
             close(client.sock)
             return true
         end
     catch y
-        warn("Error sending exit command to server")
+        @warn("Error sending exit command to server")
         return false
     end
 end
