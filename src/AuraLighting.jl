@@ -140,6 +140,9 @@ function ZMQservice(au::AuraMbControl)
                 send(sock, "OK")
             elseif words[1] == "getcontroller"
                 send(sock, "OK $(au.controllernumber)")
+            elseif words[1] == "exit"
+                send(sock, "OK")
+                break
             else
                 warn("Unknown command received: $message")
                 send(sock, "ERROR in message received: $message")
@@ -246,6 +249,21 @@ function setmode(client::AuraMBControlClient, mode)
         return message[1:2] == "OK"
     catch y
         warn("Error setting mode")
+        return false
+    end
+end
+
+function sendexit(client::AuraMBControlClient, mode)
+    0 <= mode <= 1 || return false
+    try
+        send(client.sock, "exit")
+        message = recv(client.sock, String)
+        if message[1:2] == "OK"
+            info("Sent exit command to server, terminating socket")
+            close(client.sock)
+        end
+    catch y
+        warn("Error sending exit command to server")
         return false
     end
 end
