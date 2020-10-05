@@ -3,7 +3,7 @@ module AuraLighting
 using ZMQ
 
 export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setmode
-export rbgtoi, itorbg, startserver, iscorrectcontroller
+export rbgtoi, itorbg, startserver, iscorrectcontroller, sendexit
 
 const Handle = Ptr{Cvoid}
 const Hptr = Ptr{Ptr{Cvoid}}
@@ -253,7 +253,7 @@ function setmode(client::AuraMBControlClient, mode)
     end
 end
 
-function sendexit(client::AuraMBControlClient, mode)
+function sendexit(client::AuraMBControlClient)
     0 <= mode <= 1 || return false
     try
         send(client.sock, "exit")
