@@ -5,8 +5,6 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
 
     GC.enable(false)
 
-    @testset "Direct control" begin
-
         aur = AuraMbControl()
         @test aur isa AuraMbControl
 
@@ -65,11 +63,6 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
             @test rbgtoi(c[1], c[2], c[3]) == n
         end
 
-    end #testset
-
-    @testset "Client-server control" begin
-
-        aur = AuraMbControl()
         startserver(aur)
         sleep(200)
 
@@ -85,33 +78,23 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
         @test g == 0x0
         @test b == 0xff
 
-    end #testset
-
-    @testset "Restore to auto mode" begin
-        aur = AuraMbControl()
-        @test aur isa AuraMbControl
+        sleep(1)
         setmode(aur, 0)
-
-    end #testset
 
 elseif sizeof(C_NULL) == 8  # 64-bit mode
 
-    @testset "64-bit client doing Client-server control" begin
-
-        cli = AuraMBControlClient()
-        @test cli isa AuraMBControlClient
-        @test iscorrectcontroller(cli)
+        client = AuraMBControlClient()
+        @test client isa AuraMBControlClient
+        @test iscorrectcontroller(client)
 
         println("Client request yellow")
-        setcolor(cli, 0xff00ff)
+        setcolor(client, 0xff00ff)
         sleep(3)
-        r, g, b = getcolor(cli)
+        r, g, b = getcolor(client)
         @test r == 0xff
         @test g == 0x0
         @test b == 0xff
 
-        @test sendexit(aur)
-
-    end #testset
+        @test sendexit(client)
 
 end
