@@ -1,12 +1,15 @@
 using AuraLighting
 using Test, Random
 
+GC.enable(false)
+
 @testset "Direct control" begin
 
     aur = AuraMbControl()
     @test aur isa AuraMbControl
 
     setmode(aur, 1)
+    sleep(0.5)
 
     println("white")
     setcolor(aur, 0xff, 0xff, 0xff)
@@ -32,7 +35,7 @@ using Test, Random
     @test b == 0
     @test g == 0
 
-    println("green")
+    println("blue")
     setcolor(aur, 0x0, 0xff, 0x0)
     sleep(0.8)
     r, b, g = getcolor(aur)
@@ -40,7 +43,7 @@ using Test, Random
     @test b == 0xff
     @test g == 0
 
-    println("blue")
+    println("green")
     setcolor(aur, 0x0, 0x0, 0xff)
     sleep(0.8)
     r, b, g = getcolor(aur)
@@ -65,13 +68,13 @@ end #testset
 @testset "Client-server control" begin
 
     aur = AuraMbControl()
-    sleep(0.8)
-    @test aur isa AuraMbControl
     startserver(aur)
     sleep(1)
+
     cli = AuraMBControlClient(1)
     @test cli isa AuraMBControlClient
     @test iscorrectcontroller(cli)
+
     println("Client request yellow")
     setcolor(cli, 0xff00ff)
     sleep(3)
@@ -83,7 +86,6 @@ end #testset
 end #testset
 
 @testset "Restore to auto mode" begin
-
     aur = AuraMbControl()
     @test aur isa AuraMbControl
     setmode(aur, 0)
