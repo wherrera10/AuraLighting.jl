@@ -10,11 +10,8 @@ const Hptr = Ptr{Ptr{Cvoid}}
 const Bptr = Ptr{UInt8}
 
 """
-IMPORTANT FOR 0MQ SERVER MODE:  MUST BE WINDOWS 32-BIT JULIA IN ADMIN PRIVILEGE MODE
 NOTE: THIS DLL FILE MUST BE EITHER BE LOCATED IN THE DIRECTORY WHERE PROGRAM IS RUN,
 OR ELSE YOU SHOULD PLACE A COPY IN A DIRECTORY IN YOUR PATH.
-
-The client may 64-bit or 32-bit and may have only user mode privileges.
 """
 const DLLNAME = "AURA_SDK.dll"
 
@@ -43,16 +40,15 @@ port: port number of ZMQ service, defaults to 5555
 client: address of ZMQ client, defaults to "localhost"
 """
 function AuraMbControl(cont=1, port=5555, client="localhost")
-    GC.enable(false)
     hcount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
     handles = [C_NULL for _ in 1:hcount]
-    LEDcount = 1
+    n = max(min(hcount, cont), 1)
     GC.@preserve handles begin
-        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount)
+        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, n)
+        handle = handles[cont]
+        LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
+        return AuraMbControl(cont, LEDcount, handle, port, client)
     end
-    handle = handles[min(cont, hcount)]
-    LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
-    return AuraMbControl(cont, LEDcount, handle, port, client)
 end
 
 function startserver(au)
@@ -68,7 +64,8 @@ A setting of 0 will change to the auto mode. A setting of 1 is software control.
 """
 function setmode(au::AuraMbControl, setting::Integer)
     0 <= setting <= 1 || return false
-    return ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), au.handle, setting)
+    h = au.handle
+    return ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), h, setting)
 end
 
 """
@@ -84,8 +81,8 @@ function getcolor(au::AuraMbControl)
     GC.@preserve buf begin
         ccall((:GetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
             au.handle, buf, au.buflen)
+        return Int(buf[1]), Int(buf[2]), Int(buf[3])
     end
-    return Int(au.colorbuf[1]), Int(au.colorbuf[2]), Int(au.colorbuf[3])
 end
 
 """
@@ -101,8 +98,8 @@ function setcolor(au::AuraMbControl, red, green, blue)
     GC.@preserve buf begin
         success = ccall((:SetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
             au.handle, buf, au.buflen)
+        return success == 1
     end
-    return success == 1
 end
 
 """
