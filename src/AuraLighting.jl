@@ -261,6 +261,7 @@ function sendexit(client::AuraMBControlClient, mode)
         if message[1:2] == "OK"
             info("Sent exit command to server, terminating socket")
             close(client.sock)
+            return true
         end
     catch y
         warn("Error sending exit command to server")
