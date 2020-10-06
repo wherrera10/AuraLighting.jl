@@ -5,7 +5,7 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
 
     GC.enable(false)
 
-    aur = AuraMbControl()
+    aur = AuraMbControl(1, 5555)
     @test aur isa AuraMbControl
 
     setmode(aur, 1)
@@ -14,7 +14,7 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
     println("white")
     setcolor(aur, 0xff, 0xff, 0xff)
     sleep(0.8)
-    r, b, g = AuraLighting.getcolor(aur)
+    r, b, g = getcolor(aur)
     @test r == 0xff
     @test b == 0xff
     @test g == 0xff
@@ -22,7 +22,7 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
     println("black")
     setcolor(aur, 0x0, 0x0, 0x0)
     sleep(0.8)
-    r, b, g = AuraLighting.getcolor(aur)
+    r, b, g = getcolor(aur)
     @test r == 0
     @test b == 0
     @test g == 0
@@ -30,7 +30,7 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
     println("red")
     setcolor(aur, 0xff, 0x0, 0x0)
     sleep(0.8)
-    r, b, g = AuraLighting.getcolor(aur)
+    r, b, g = getcolor(aur)
     @test r == 0xff
     @test b == 0
     @test g == 0
@@ -68,8 +68,8 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
     sleep(30)
     @info("Service will terminate in 5 seconds.")
 
-    cli = AuraMBControlClient(1)
-    @test cli isa AuraMBControlClient
+    cli = AuraControlClient(5555)
+    @test cli isa AuraControlClient
     @test iscorrectcontroller(cli)
 
     println("Client request yellow")
@@ -85,16 +85,19 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
 
 elseif sizeof(C_NULL) == 8  # 64-bit mode
 
-    client = AuraMBControlClient()
-    @test client isa AuraMBControlClient
-    @test iscorrectcontroller(client)
+    @testset "64-bit" begin
+        client = AuraControlClient(5555)
+        @test client isa AuraControlClient
+        @test iscorrectcontroller(client)
 
-    println("Client request yellow")
-    setcolor(client, 0xff00ff)
-    sleep(3)
-    r, g, b = getcolor(client)
-    @test r == 0xff
-    @test g == 0x0
-    @test b == 0xff
+        println("Client request yellow")
+        setcolor(client, 0xff00ff)
+        sleep(3)
+        r, g, b = getcolor(client)
+        @test r == 0xff
+        @test g == 0x0
+        @test b == 0xff
+
+    end
 
 end
