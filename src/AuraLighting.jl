@@ -21,14 +21,14 @@ itorbg(i) = [UInt8((i >> 16) & 0xff), UInt8((i >> 8) & 0xff), UInt8(i & 0xff)]
 """ UInt8 (r, g, b) to rgb integer """
 rbgtoi(r, g, b) = ((UInt32(r) << 16) | (UInt32(g) << 8) | UInt32(b)) & 0xffffff
 
-mutable struct AuraMbControl
+struct AuraMbControl
     controllernumber::Int
     LEDcount::Int
     handle::Handle
     colorbuf::Vector{UInt8}
     buflen::Int
     port::Int
-    AuraMbControl(c, n, h, p, a) = new(c, n, h, zeros(UInt, n * 3), n * 3, p, a)
+    AuraMbControl(c, n, h, p) = new(c, n, h, zeros(UInt, n * 3), n * 3, p)
 end
 
 """
@@ -38,12 +38,12 @@ cont: controller number, defaults to 1 (first or only controller found)
 port: port number of ZMQ service, defaults to 5555
 """
 function AuraMbControl(cont=1, port=5555)
+    GC.enable(false)
     hcount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
     handles = [C_NULL for _ in 1:hcount]
-    n = max(min(hcount, cont), 1)
     GC.@preserve handles begin
-        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, n)
-        handle = handles[cont]
+        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount)
+        handle = handles[max(min(hcount, cont), 1)]
         LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
         return AuraMbControl(cont, LEDcount, handle, port)
     end
