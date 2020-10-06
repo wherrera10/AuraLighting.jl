@@ -2,7 +2,7 @@ module AuraLighting
 
 using ZMQ
 
-export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setmode
+export AuraMbControl, AuraControlClient, getcolor, setcolor, setmode
 export rbgtoi, itorbg, startserver, iscorrectcontroller, sendexit
 
 export AuraGPUControl, AuraKeyboardControl, AuraMouseControl
@@ -267,17 +267,17 @@ function ZMQservice(au::AuraControl)
 end
 
 """
-    struct AuraMBControlClient
+    struct AuraControlClient
 
 Client for a service to change Aura lighting via the 32-bit Win32 Aura lighting SDK.
 
 This client can be any application and can be 64-bit even though the server must be
 32-bit because ASUStek only provided a 32-bit DLL for Windows in its AuraSDK library.
 """
-struct AuraMBControlClient
+struct AuraControlClient
     sock::Socket
     controllernumber::Int
-    function AuraMBControlClient(cont=1, port=5555, server="localhost")
+    function AuraControlClient(port=5555, server="localhost", cont=1)
         sock = Socket(REQ)
         connect(sock, "tcp://$server:$port")
         new(sock, cont)
@@ -285,13 +285,13 @@ struct AuraMBControlClient
 end
 
 """
-    function iscorrectcontroller(client::AuraMBControlClient)
+    function iscorrectcontroller(client::AuraControlClient)
 
 Check if the client's controller number matches the server's controller number.
 It is not actually necessary these two match, but checking this may help avoid
 sending commands to the wrong controller.
 """
-function iscorrectcontroller(client::AuraMBControlClient)
+function iscorrectcontroller(client::AuraControlClient)
     send(client.sock, "getcontroller")
     message = ZMQ.recv(client.sock, String)
     try
@@ -308,13 +308,18 @@ end
 
 Get Aura lighting color as a tuple of red, green, and blue.
 """
-function getcolor(client::AuraMBControlClient)
+function getcolor(client::AuraControlClient)
     try
         send(client.sock, "getcolor")
         message = ZMQ.recv(client.sock, String)
         s = split(message, r"\s+")
-        c = parse(Int, s[2])
-        return Tuple(itorbg(c))
+        if s[1] != "OK"
+            @warn("Error, getcolor may not be supported")
+        return (0, 0, 0)
+        else
+            c = parse(Int, s[2])
+            return Tuple(itorbg(c))
+        end
     catch y
         @warn("Error getting color: $y")
         return (0, 0, 0)
@@ -322,12 +327,12 @@ function getcolor(client::AuraMBControlClient)
 end
 
 """
-    function setcolor(client::AuraMBControlClient, color::Integer)
+    function setcolor(client::AuraControlClient, color::Integer)
 
 Set Aura lighting color to an RGB integer of form 0xrrggbb.
 Return: true on success, false on failure
 """
-function setcolor(client::AuraMBControlClient, color)
+function setcolor(client::AuraControlClient, color)
     try
         send(client.sock, "setcolor $(color & 0xffffff)")
         message = ZMQ.recv(client.sock, String)
@@ -339,20 +344,20 @@ function setcolor(client::AuraMBControlClient, color)
 end
 
 """
-    function setcolor(client::AuraMBControlClient, r, g, b)
+    function setcolor(client::AuraControlClient, r, g, b)
 
 Set Aura lighting color to RGB color with components r red, g green, b blue.
 Return: true on success, false on failure
 """
-setcolor(client::AuraMBControlClient, r, g, b) = setcolor(client, rbgtoi(r, g, b))
+setcolor(client::AuraControlClient, r, g, b) = setcolor(client, rbgtoi(r, g, b))
 
 """
-   function setmode(client::AuraMBControlClient, mode::Integer)
+   function setmode(client::AuraControlClient, mode::Integer)
 
 Set the mode of the controller to 0 for auto mode, 1 for software controlled.
 Return true on success
 """
-function setmode(client::AuraMBControlClient, mode)
+function setmode(client::AuraControlClient, mode)
     0 <= mode <= 1 || return false
     try
         send(client.sock, "setmode $mode")
@@ -364,7 +369,7 @@ function setmode(client::AuraMBControlClient, mode)
     end
 end
 
-function sendexit(client::AuraMBControlClient)
+function sendexit(client::AuraControlClient)
     try
         send(client.sock, "exit")
         message = recv(client.sock, String)
