@@ -20,12 +20,12 @@ Client interaction with the 32-bit Aura hardware server can be run with any Juli
  
 The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
 
-Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond. Using 
-the SDK DLL may result in a segfault if the Aura hardware errors, which may occur if 
-commands are sent too fast for the hardware to change the LED lighting successfully. Some 
-but not all these glitches were supposed to be fixed in the 2.0 DLL version. Allowing 
-about 1/2 to 1 second between sending commands may help, as does turning off garbage collection, 
-which allows Julia to mostly ignore some AURA_SDK.dll based memory errors..
+Note that the AURA_SDK dll is a bit glitchy, especially when the hardware is slow to respond. 
+Using the SDK DLL may result in a segfault if the Aura hardware errors, which may occur more if 
+commands are sent too fast for the hardware to change the LED lighting successfully. Some but 
+not all these glitches were supposed to be fixed in the 2.0 DLL version. Allowing about 1/2 
+second between sending commands may help, as does turning off garbage collection, 
+which allows Julia to mostly ignore some AURA_SDK.dll based memory errors. YMMV.
 
 
 ### Example:
