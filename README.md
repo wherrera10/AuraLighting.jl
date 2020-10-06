@@ -24,7 +24,8 @@ Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond
 the SDK DLL may result in a segfault if the Aura hardware errors, which may occur if 
 commands are sent too fast for the hardware to change the LED lighting successfully. Some 
 but not all these glitches were supposed to be fixed in the 2.0 DLL version. Allowing 
-about 1/2 to 1 second between sending commands may help, as does turni9ng off garbage collection.
+about 1/2 to 1 second between sending commands may help, as does turning off garbage collection, 
+which allows Julia to mostly ignore some AURA_SDK.dll based memory errors..
 
 
 ### Example:
