@@ -313,7 +313,7 @@ function ZMQservice(au::AuraControl)
             end
         end
     catch y
-        warn("ZMQ server fatal error: $y with message $message")
+        @warn("ZMQ server fatal error: $y with message $message")
     finally
         close(sock)
     end
