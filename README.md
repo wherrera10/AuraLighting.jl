@@ -15,19 +15,20 @@
 
 ### Client mode using the ZMQ.jl functions.
 
-    Client interaction with thw Aura hardware can be run with any Julia process, 32 or 64 bit.
-    The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
+####Client interaction with thw Aura hardware can be run with any Julia process, 32 or 64 bit.
+    
+####The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
 
-    Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond. Using
+####Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond. Using
     the SDK DLL may result in a segfault if the Aura hardware errors, which may occur if
     commands are sent too fast for the hardware to change the LED lighting successfully. Some
     but not all these glitches were supposed to be fixed in the 2.0 DLL version. Allowing
     about 1/2 to 1 second between sending commands may help.
 
 
-    Example:
+####Example:
 
-    32-bit server:
+####32-bit server:
 
     GC.enable(false)  # DLL glitch workaround
 
@@ -35,7 +36,7 @@
     startservice(aur)
 
 
-    64-bit client:
+####64-bit client:
 
     client = AuraMBControlClient(1, 5555)
 
