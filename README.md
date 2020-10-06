@@ -36,6 +36,8 @@ which allows Julia to mostly ignore some AURA_SDK.dll based memory errors..
 
     aur = AuraMbControl(1, 5555)
     startservice(aur)
+    
+    while true sleep(0.5); end  # only use if not running in REPL
 
 
 ### 64-bit client:
