@@ -15,7 +15,6 @@ if Sys.iswindows() && sizeof(C_NULL) == 4 # if can use 32-bit Win32 DLL AURA_SDK
 
         println("white")
         setcolor(aur, 0xff, 0xff, 0xff)
-    println("got done set")
         sleep(0.8)
         r, b, g = getcolor(aur)
         @test r == 0xff
