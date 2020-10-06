@@ -1,7 +1,7 @@
 using AuraLighting
 using Test, Random
 
-if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
+if Sys.iswindows() && sizeof(C_NULL) == 4 # if can use 32-bit Win32 DLL AURA_SDK.dll
 
     GC.enable(false)
 
