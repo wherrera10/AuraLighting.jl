@@ -28,6 +28,7 @@
 
     32-bit server:
 
+    GC.enable(false)  # DLL glitch workaround
 
     aur = AuraMbControl(1, 5555)
     startservice(aur)
