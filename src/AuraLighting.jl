@@ -37,6 +37,7 @@ end
 
 """
     function AuraMbControl(cont=1; asservice=false, port=5555)
+
 Constructor for an AuraMBControl.
 cont: controller number, defaults to 1 (first or only controller found)
 port: port number of ZMQ service, defaults to 5555
@@ -64,8 +65,10 @@ struct AuraGPUControl <: AuraControl
 end
 
 """
-    function AuraGPUControl(cont=1; asservice=false, port=5556)
+    function AuraGPUControl(cont=1, port=5556)
+
 Constructor for an AuraGPUControl.
+cont: controller number, defaults to 1 (first or only controller found)
 port: port number of ZMQ service, defaults to 5556
 """
 function AuraGPUControl(cont=1, port=5556)
