@@ -103,7 +103,7 @@ function AuraKeyboardControl(port=5557)
         ccall((:CreateClaymoreKeyboard, DLLNAME), Cint, (Hptr,), handles)
         handle = handles[1]
         LEDcount = ccall((:GetClaymoreKeyboardLedCount, DLLNAME), Cint, (Handle,), handle)
-        return AuraKryboardControl(LEDcount, handle, port)
+        return AuraKeyboardControl(LEDcount, handle, port)
     end
 end
 
