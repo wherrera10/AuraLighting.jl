@@ -193,17 +193,68 @@ function getcolor(au::AuraControl)
 end
 
 """
-    function setcolor(au::AuraControl, red, green, blue)
+    function setcolor(au::AuraMbControl, red, green, blue)
 
 Set RGB color via setting color with separate red, green, and blue values
 """
-function setcolor(au::AuraControl, red, green, blue)
+function setcolor(au::AuraMbControl, red, green, blue)
     for i in 1:3:au.buflen-1
         au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
     end
     buf = au.colorbuf
     GC.@preserve buf begin
         success = ccall((:SetMbColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+            au.handle, buf, au.buflen)
+        return success == 1
+    end
+end
+
+"""
+    function setcolor(au::AuraGPUControl, red, green, blue)
+
+Set RGB color via setting color with separate red, green, and blue values
+"""
+function setcolor(au::AuraGPUControl, red, green, blue)
+    for i in 1:3:au.buflen-1
+        au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
+    end
+    buf = au.colorbuf
+    GC.@preserve buf begin
+        success = ccall((:SetGPUColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+            au.handle, buf, au.buflen)
+        return success == 1
+    end
+end
+
+"""
+    function setcolor(au::AuraKeyboardControl, red, green, blue)
+
+Set RGB color via setting color with separate red, green, and blue values
+"""
+function setcolor(au::AuraKeyboardControl, red, green, blue)
+    for i in 1:3:au.buflen-1
+        au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
+    end
+    buf = au.colorbuf
+    GC.@preserve buf begin
+        success = ccall((:SetClaymoreKeyboardColor, DLLNAME), Cint, (Handle, Bptr, Cint),
+            au.handle, buf, au.buflen)
+        return success == 1
+    end
+end
+
+"""
+    function setcolor(au::AuraControl, red, green, blue)
+
+Set RGB color via setting color with separate red, green, and blue values
+"""
+function setcolor(au::AuraMouseControl, red, green, blue)
+    for i in 1:3:au.buflen-1
+        au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
+    end
+    buf = au.colorbuf
+    GC.@preserve buf begin
+        success = ccall((:SetRogMouseColor, DLLNAME), Cint, (Handle, Bptr, Cint),
             au.handle, buf, au.buflen)
         return success == 1
     end
