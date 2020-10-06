@@ -7,8 +7,8 @@
 ### Server mode or direct hardware interaction mode.
 
     You need to run the main process (for directly interacting with the Aura lighting hardware):
-       1.    As a 32-bit process under Windows: see Julia at 
-             [Download-Win32](https://julialang-s3.julialang.org/bin/winnt/x86/1.5/julia-1.5.2-win32.exe).
+       1.    As a 32-bit process under Windows: see Julia Windows 32-bit download at 
+             [Download-Win32](https://julialang.org/downloads/)
        2.    In adminstrator privilege mode under Windows ("Run as administrator")
 
     This is because the Aura SDK itself, as provided by ASUStek, is a 32-bit DLL.
