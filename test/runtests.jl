@@ -59,8 +59,8 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
         println("Set color to $n")
         setcolor(aur, n)
         sleep(0.8)
-        r2, g2, b2 = getcolor(aur)
-        @test rbgtoi(c[1], c[2], c[3]) == n
+        r2, b2, g2 = getcolor(aur)
+        @test rbgtoi(r2, b2, g2) == n
     end
 
     startserver(aur)
@@ -75,10 +75,10 @@ if sizeof(C_NULL) == 4 # 32-bit mode can use the 32-bit DLL AURA_SDK.dll
     println("Client request yellow")
     setcolor(cli, 0xff00ff)
     sleep(3)
-    r, g, b = getcolor(cli)
+    r, b, g = getcolor(cli)
     @test r == 0xff
-    @test g == 0x0
-    @test b == 0xff
+    @test b == 0x0
+    @test g == 0xff
 
     sleep(1)
     setmode(aur, 0)
