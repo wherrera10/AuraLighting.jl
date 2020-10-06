@@ -4,7 +4,6 @@ using ZMQ
 
 export AuraMbControl, AuraControlClient, getcolor, setcolor, setmode
 export rbgtoi, itorbg, startserver, iscorrectcontroller, sendexit
-
 export AuraGPUControl, AuraKeyboardControl, AuraMouseControl
 
 const Handle = Ptr{Cvoid}
