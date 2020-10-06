@@ -15,9 +15,9 @@
 
 ## Client mode using the ZMQ.jl functions.
 
-### Client interaction with thw Aura hardware can be run with any Julia process, 32 or 64 bit.
-    
-### The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
+Client interaction with thw Aura hardware can be run with any Julia process, 32 or 64 bit.
+ 
+The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
 
 Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond. Using 
 the SDK DLL may result in a segfault if the Aura hardware errors, which may occur if 
