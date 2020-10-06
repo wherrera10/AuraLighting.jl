@@ -19,11 +19,11 @@
     
 ### The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
 
-### Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond. Using
-    the SDK DLL may result in a segfault if the Aura hardware errors, which may occur if
-    commands are sent too fast for the hardware to change the LED lighting successfully. Some
-    but not all these glitches were supposed to be fixed in the 2.0 DLL version. Allowing
-    about 1/2 to 1 second between sending commands may help.
+Note that the AURA_SDK dll is a bit glitchy when the hardware is slow to respond. Using 
+the SDK DLL may result in a segfault if the Aura hardware errors, which may occur if 
+commands are sent too fast for the hardware to change the LED lighting successfully. Some 
+but not all these glitches were supposed to be fixed in the 2.0 DLL version. Allowing 
+about 1/2 to 1 second between sending commands may help.
 
 
 ### Example:
