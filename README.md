@@ -16,7 +16,7 @@ This is because the Aura SDK itself, as provided by ASUStek, is a 32-bit DLL.
 
 ## Client mode using the ZMQ.jl functions.
 
-Client interaction with thw Aura hardware can be run with any Julia process, 32 or 64 bit.
+Client interaction with the 32-bit Aura hardware server can be run with any Julia process, 32 or 64 bit.
  
 The OS may be any Julia capable of running ZMQ, and need not be on the same machine.
 
