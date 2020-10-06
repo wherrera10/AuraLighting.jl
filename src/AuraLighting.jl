@@ -80,7 +80,7 @@ function AuraGPUControl(cont=1, port=5556)
     end
 end
 
-struct AuraKeyboardControl
+struct AuraKeyboardControl <: AuraControl
     LEDcount::Int
     handle::Handle
     colorbuf::Vector{UInt8}
