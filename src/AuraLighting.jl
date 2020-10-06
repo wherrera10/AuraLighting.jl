@@ -5,6 +5,8 @@ using ZMQ
 export AuraMbControl, AuraMBControlClient, getcolor, setcolor, setmode
 export rbgtoi, itorbg, startserver, iscorrectcontroller, sendexit
 
+export AuraGPUControl, AuraKeyboardControl, AuraMouseControl
+
 const Handle = Ptr{Cvoid}
 const Hptr = Ptr{Ptr{Cvoid}}
 const Bptr = Ptr{UInt8}
@@ -21,7 +23,9 @@ itorbg(i) = [UInt8((i >> 16) & 0xff), UInt8((i >> 8) & 0xff), UInt8(i & 0xff)]
 """ UInt8 (r, g, b) to rgb integer """
 rbgtoi(r, g, b) = ((UInt32(r) << 16) | (UInt32(g) << 8) | UInt32(b)) & 0xffffff
 
-struct AuraMbControl
+abstract type AuraControl end
+
+struct AuraMbControl <: AuraControl
     controllernumber::Int
     LEDcount::Int
     handle::Handle
@@ -49,9 +53,91 @@ function AuraMbControl(cont=1, port=5555)
     end
 end
 
-function startserver(au)
+struct AuraGPUControl <: AuraControl
+    controllernumber::Int
+    LEDcount::Int
+    handle::Handle
+    colorbuf::Vector{UInt8}
+    buflen::Int
+    port::Int
+    AuraGPUControl(c, n, h, p) = new(c, n, h, zeros(UInt, n * 3), n * 3, p)
+end
+
+"""
+    function AuraGPUControl(cont=1; asservice=false, port=5556)
+Constructor for an AuraGPUControl.
+port: port number of ZMQ service, defaults to 5556
+"""
+function AuraGPUControl(cont=1, port=5556)
+    GC.enable(false)
+    hcount = ccall((:EnumerateGPU, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
+    handles = [C_NULL for _ in 1:hcount]
+    GC.@preserve handles begin
+        ccall((:EnumerateGPU, DLLNAME), Cint, (Hptr, Cint), handles, hcount)
+        handle = handles[max(min(hcount, cont), 1)]
+        LEDcount = ccall((:GetGPULedCount, DLLNAME), Cint, (Handle,), handle)
+        return AuraGPUControl(cont, LEDcount, handle, port)
+    end
+end
+
+struct AuraKeyboardControl
+    LEDcount::Int
+    handle::Handle
+    colorbuf::Vector{UInt8}
+    buflen::Int
+    port::Int
+    AuraKeyboardControl(n, h, p) = new(n, h, zeros(UInt, n * 3), n * 3, p)
+end
+
+"""
+    function AuraKeyboardControl(cont=1; asservice=false, port=5557)
+Constructor for an AuraKeyboardControl.
+port: port number of ZMQ service, defaults to 5557
+"""
+function AuraKeyboardControl(port=5557)
+    GC.enable(false)
+    handles = [C_NULL]
+    GC.@preserve handles begin
+        ccall((:CreateClaymoreKeyboard, DLLNAME), Cint, (Hptr,), handles)
+        handle = handles[1]
+        LEDcount = ccall((:GetClaymoreKeyboardLedCount, DLLNAME), Cint, (Handle,), handle)
+        return AuraKryboardControl(LEDcount, handle, port)
+    end
+end
+
+struct AuraMouseControl <: AuraControl
+    LEDcount::Int
+    handle::Handle
+    colorbuf::Vector{UInt8}
+    buflen::Int
+    port::Int
+    AuraMouseControl(n, h, p) = new(n, h, zeros(UInt, n * 3), n * 3, p)
+end
+
+"""
+    function AuraMouseControl(cont=1; asservice=false, port=5558)
+Constructor for an AuraMouseControl.
+port: port number of ZMQ service, defaults to 5558
+"""
+function AuraMouseControl(port=5558)
+    GC.enable(false)
+    handles = [C_NULL]
+    GC.@preserve handles begin
+        ccall((:CreateRogMouse, DLLNAME), Cint, (Hptr,), handles)
+        handle = handles[1]
+        LEDcount = ccall((:GetRogLedCount, DLLNAME), Cint, (Handle,), handle)
+        return AuraMouseControl(LEDcount, handle, port)
+    end
+end
+
+function startserver(au::AuraControl)
     @async begin ZMQservice(au) end
 end
+
+""" only motherboard and GPU have controller number, all others are just 1 """
+controllernumber(au::AuraMbControl) = au.controllernumber
+controllernumber(au::AuraGPUControl) = au.controllernumber
+controllernumber(au::AuraControl) = 1
 
 """
    function setmode(au::AuraMbControl, setting::Integer=0)
@@ -64,6 +150,24 @@ function setmode(au::AuraMbControl, setting::Integer)
     0 <= setting <= 1 || return false
     h = au.handle
     return ccall((:SetMbMode, DLLNAME), Cint, (Handle, Cint), h, setting)
+end
+
+function setmode(au::AuraGPUControl, setting::Integer)
+    0 <= setting <= 1 || return false
+    h = au.handle
+    return ccall((:SetGPUMode, DLLNAME), Cint, (Handle, Cint), h, setting)
+end
+
+function setmode(au::AuraKeyboardControl, setting::Integer)
+    0 <= setting <= 1 || return false
+    h = au.handle
+    return ccall((:SetClaymoreKeyboardMode, DLLNAME), Cint, (Handle, Cint), h, setting)
+end
+
+function setmode(au::AuraMouseControl, setting::Integer)
+    0 <= setting <= 1 || return false
+    h = au.handle
+    return ccall((:SetRogMouseMode, DLLNAME), Cint, (Handle, Cint), h, setting)
 end
 
 """
@@ -83,12 +187,17 @@ function getcolor(au::AuraMbControl)
     end
 end
 
+""" only motherboard currently can get color, though all types can set color """
+function getcolor(au::AuraControl)
+    return (-1, -1, -1)
+end
+
 """
-    function setcolor(au::AuraMbControl, red, green, blue)
+    function setcolor(au::AuraControl, red, green, blue)
 
 Set RGB color via setting color with separate red, green, and blue values
 """
-function setcolor(au::AuraMbControl, red, green, blue)
+function setcolor(au::AuraControl, red, green, blue)
     for i in 1:3:au.buflen-1
         au.colorbuf[i], au.colorbuf[i+1], au.colorbuf[i+2] = red, green, blue
     end
@@ -101,25 +210,25 @@ function setcolor(au::AuraMbControl, red, green, blue)
 end
 
 """
-    function setcolor(au::AuraMbControl, rgb::Integer)
+    function setcolor(au::AuraControl, rgb::Integer)
 
 Set color of the LED light as an integer in 24-bit RGB format.
 The color is of form hex 0xRRGGBB, where RR is the red component, GG green,
     and BB the blue values of an 24-bit RGB coded color.
 Black is 0, white is 0x00ffffff, red 0xff0000, green 0x00ff00, blue 0x0000ff
 """
-function setcolor(au::AuraMbControl, rgb)
+function setcolor(au::AuraControl, rgb)
     r, g, b = itorbg(rgb)
     setcolor(au, r, g, b)
 end
 
 """
-    function ZMQservice(au::AuraMbLighting)
+    function ZMQservice(au::AuraControl)
 
 Serve requests via ZMQ to control the Aura lighting controller on the motherboard.
 This must be run in 32-bit Windows mode with admin privileges.
 """
-function ZMQservice(au::AuraMbControl)
+function ZMQservice(au::AuraControl)
     sock = Socket(REP)
     bind(sock, "tcp://*:$(au.port)")
     try
@@ -129,7 +238,11 @@ function ZMQservice(au::AuraMbControl)
             words = split(cmd, r"\s+")
             if words[1] == "getcolor"
                 r, g, b = getcolor(au)
-                send(sock, "OK $(rbgtoi(r, g, b))")
+                if r == g == b == -1
+                    send("ERROR not supported")
+                else
+                    send(sock, "OK $(rbgtoi(r, g, b))")
+                end
             elseif words[1] == "setcolor" && (c = tryparse(Int, words[2])) != nothing
                 setcolor(au, c)
                 send(sock, "OK")
@@ -137,7 +250,7 @@ function ZMQservice(au::AuraMbControl)
                 setmode(au, n)
                 send(sock, "OK")
             elseif words[1] == "getcontroller"
-                send(sock, "OK $(au.controllernumber)")
+                send(sock, "OK $(controllernumber(au))")
             elseif words[1] == "exit"
                 send(sock, "OK")
                 break
