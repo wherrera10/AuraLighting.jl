@@ -40,7 +40,7 @@ which allows Julia to mostly ignore some AURA_SDK.dll based memory errors..
 
 ### 64-bit client:
 
-    client = AuraMBControlClient(1, 5555, "localhost")
+    client = AuraControlClient(5555, "localhost", 1)
 
     println("Client request yellow")
     setcolor(client, 0xff00ff)
