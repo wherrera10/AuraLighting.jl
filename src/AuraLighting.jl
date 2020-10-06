@@ -28,18 +28,16 @@ mutable struct AuraMbControl
     colorbuf::Vector{UInt8}
     buflen::Int
     port::Int
-    client::String
     AuraMbControl(c, n, h, p, a) = new(c, n, h, zeros(UInt, n * 3), n * 3, p, a)
 end
 
 """
-    function AuraMbControl(cont=1; asservice=false, port=5555, client="localhost")
+    function AuraMbControl(cont=1; asservice=false, port=5555)
 Constructor for an AuraMBControl.
 cont: controller number, defaults to 1 (first or only controller found)
 port: port number of ZMQ service, defaults to 5555
-client: address of ZMQ client, defaults to "localhost"
 """
-function AuraMbControl(cont=1, port=5555, client="localhost")
+function AuraMbControl(cont=1, port=5555)
     hcount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
     handles = [C_NULL for _ in 1:hcount]
     n = max(min(hcount, cont), 1)
@@ -47,7 +45,7 @@ function AuraMbControl(cont=1, port=5555, client="localhost")
         ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, n)
         handle = handles[cont]
         LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
-        return AuraMbControl(cont, LEDcount, handle, port, client)
+        return AuraMbControl(cont, LEDcount, handle, port)
     end
 end
 
