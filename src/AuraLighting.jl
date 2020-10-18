@@ -49,7 +49,6 @@ function AuraMbControl(cont=1, port=5555)
         ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount) 
         handle = handles[hcount]
         LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
-        Libc.free(handles)
         return AuraMbControl(cont, LEDcount, handle, port)
     end
 end
