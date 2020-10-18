@@ -44,10 +44,11 @@ port: port number of ZMQ service, defaults to 5555
 function AuraMbControl(cont=1, port=5555)
     GC.enable(false)
     hcount = ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), C_NULL, 0)
-    handles = Libc.malloc(hcount * 4)
+    chandles = Libc.malloc(hcount * 4)
+    handles = [C_NULL for _ in 1:hcount]
     GC.@preserve handles begin
-        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount)
-        handle = handles[max(min(hcount, cont), 1)]
+        unsafe_copy!(handles, chandles, 0, 4)
+        ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount)       
         LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
         Libc.free(handles)
         return AuraMbControl(cont, LEDcount, handle, port)
