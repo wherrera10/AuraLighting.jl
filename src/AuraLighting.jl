@@ -47,7 +47,7 @@ function AuraMbControl(cont=1, port=5555)
     chandles = Libc.malloc(hcount * 4)
     handles = [C_NULL for _ in 1:hcount]
     GC.@preserve handles begin
-        unsafe_copyyto!(handles, chandles, 0, 4)
+        unsafe_copyto!(handles, chandles, 0, 4)
         ccall((:EnumerateMbController, DLLNAME), Cint, (Hptr, Cint), handles, hcount)       
         LEDcount = ccall((:GetMbLedCount, DLLNAME), Cint, (Handle,), handle)
         Libc.free(handles)
