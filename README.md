@@ -1,6 +1,6 @@
 # AuraLighting.jl
 
-<img src="">
+<img src="https://github.com/wherrera10/AuraLighting.jl/docs/src/aur.png">
 
 ## Julia Aura Lighting interface for PC hardware using the ASUS AURA SDK.
 
