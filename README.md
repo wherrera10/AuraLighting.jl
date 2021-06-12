@@ -26,7 +26,6 @@ Note that the AURA_SDK dll is a bit glitchy, especially when the hardware is slo
 garbage collection seems to allow Julia to mostly ignore some AURA_SDK.dll based memory errors. YMMV.
 <br /><br />
 
-
 ### Example:
 
 ### 32-bit server:
