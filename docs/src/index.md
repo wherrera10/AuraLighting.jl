@@ -1,6 +1,6 @@
 # AuraLighting.jl
 
-<img src="">
+<img src="https://github.com/wherrera10/AuraLighting.jl/blob/master/docs/src/aur.png">
 
 ## Julia Aura Lighting interface for PC hardware using the ASUS AURA SDK.
 
@@ -25,7 +25,6 @@ The OS may be any Julia capable of running ZMQ, and need not be on the same mach
 Note that the AURA_SDK dll is a bit glitchy, especially when the hardware is slow to respond. Turning off 
 garbage collection seems to allow Julia to mostly ignore some AURA_SDK.dll based memory errors. YMMV.
 <br /><br />
-
 
 ### Example:
 
