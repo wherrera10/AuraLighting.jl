@@ -54,6 +54,15 @@ garbage collection seems to allow Julia to mostly ignore some AURA_SDK.dll based
 
 ## Functions
 
+    EnumerateControls()
+    
+Find any accessible Aura lighting AuraControl objects and return a set of such,
+or an empty vector if none are found. Note will also return empty if the
+Windows 32-bit DLL AURA_SDK.dll is not found (in current directory or in a directory
+previously set as a valid DLL directory) or if it is not loadable (eg, not 32-bit Windows Julia).
+<br /><br />
+
+
     itorbg(i) 
 
 Change rgb integer to a vector length 3 of UInt8 (red, green, blue)
