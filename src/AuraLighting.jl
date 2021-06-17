@@ -4,7 +4,7 @@ using ZMQ
 
 export AuraMbControl, AuraControlClient, getcolor, setcolor, setmode
 export rbgtoi, itorbg, startserver, iscorrectcontroller, sendexit
-export AuraGPUControl, AuraKeyboardControl, AuraMouseControl
+export AuraGPUControl, AuraKeyboardControl, AuraMouseControl, EnumerateControls
 
 const Handle = Ptr{Cvoid}
 const Hptr = Ptr{Ptr{Cvoid}}
@@ -317,6 +317,54 @@ function ZMQservice(au::AuraControl)
     finally
         close(sock)
     end
+end
+
+"""
+    EnumerateControls()
+Find any accessible Aura lighting AuraControl objects and return a set of such,
+or an empty vector if none are found. Note will also return empty if the
+Windows 32-bit DLL AURA_SDK.dll is not found (in current directory or in a directory
+previously set as a valid DLL directory) or if it is not loadable (eg, not 32-bit Windows Julia).
+"""
+function EnumerateControls(verbose=true)
+    found = AuraLighting.AuraControl[]
+    begin
+        try
+            auramb = AuraMbControl()
+            push!(found, auramb)
+            verbose && @warn("Found a motherboard Aura controller")
+        catch y
+            verbose && @warn("No motherboard controller found: $y")
+        end
+    end
+    begin
+        try
+            auragpu = AuraGPUControl()
+            push!(found, auragpu)
+            verbose && @warn("Found a GPU Aura controller")
+        catch y
+            verbose && @warn("No GPU controller found: $y")
+        end
+    end
+    begin
+        try
+            aurakb = AuraKeyboardControl()
+            push!(found, aurakb)
+            verbose && @warn("Found a keyboard Aura controller")
+        catch y
+            verbose && @warn("No keyboard Aura controller found: $y")
+        end
+    end
+    begin
+        try
+            auramouse = AuraMouseControl()
+            push!(found, auramouse)
+            verbose && @warn("Found a mouse Aura controller")
+        catch y
+            verbose && @warn("No mouse Aura controller found: $y")
+        end
+    end
+    return found
 end
 
 """
