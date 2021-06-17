@@ -69,7 +69,7 @@ if Sys.iswindows() && sizeof(C_NULL) == 4 # if can use 32-bit Win32 DLL AURA_SDK
 
     @testset "Client in 32-bit mode" begin
 
-        aur = AuraMbControl(1, 5555)
+        aur = AuraMbControl(1, 5559)
         @test aur isa AuraMbControl
 
         startserver(aur)
@@ -97,7 +97,7 @@ if Sys.iswindows() && sizeof(C_NULL) == 4 # if can use 32-bit Win32 DLL AURA_SDK
 elseif sizeof(C_NULL) == 8  # 64-bit mode
 
     @testset "64-bit" begin
-        client = AuraControlClient(5555)
+        client = AuraControlClient(5559)
         @test client isa AuraControlClient
         @test iscorrectcontroller(client)
 
