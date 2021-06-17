@@ -3,7 +3,7 @@ using Test, Random
 
 GC.enable(false)
 
-allaura = EnumerateControls()
+allaura = EnumerateControls(false)
 if isempty(allaura) || !any(x -> x isa AuraMbControl, allaura)
     @warn("Cannot find accessible Aura motherboard lighting hardware.")
     return @test true
