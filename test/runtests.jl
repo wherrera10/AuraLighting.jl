@@ -3,6 +3,12 @@ using Test, Random
 
 GC.enable(false)
 
+allaura = EnumerateControls()
+if isempty(allaura) || !any(x -> x isa AuraMbControl, allaura)
+    @warn("Cannot find accessible Aura motherboard lighting hardware.")
+    return @test true
+end
+
 if Sys.iswindows() && sizeof(C_NULL) == 4 # if can use 32-bit Win32 DLL AURA_SDK.dll
 
     @testset "DLL Interface" begin
