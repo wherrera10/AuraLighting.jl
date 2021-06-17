@@ -7,7 +7,7 @@ if Sys.iswindows() && sizeof(C_NULL) == 4 # if can use 32-bit Win32 DLL AURA_SDK
 
     @testset "DLL Interface" begin
 
-        aur = AuraMbControl(1, 5555)
+        aur = AuraMbControl(1, 5559)
         @test aur isa AuraMbControl
 
         setmode(aur, 1)
